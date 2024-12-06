@@ -53,3 +53,5 @@ dkms.conf
 
 build
 *input.txt
+
+lex.yy.*
