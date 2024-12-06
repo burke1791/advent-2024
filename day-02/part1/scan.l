@@ -64,7 +64,7 @@ ReportList *new_reportlist(int size) {
   ReportList *rl = malloc(sizeof(ReportList));
   rl->size = size;
   rl->count = 0;
-  rl->reports = malloc(size * sizeof(ReportList));
+  rl->reports = malloc(size * sizeof(Report));
   return rl;
 }
 
