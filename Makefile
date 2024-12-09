@@ -1,5 +1,5 @@
 
-TARGETS = d1p1 d1p2 d2p1 d2p2 d3p1 d3p2 d4p1 d4p2 d5p1 d5p2 d6p1 d6p2
+TARGETS = d1p1 d1p2 d2p1 d2p2 d3p1 d3p2 d4p1 d4p2 d5p1 d5p2 d6p1 d6p2 d7p1
 
 all: $(TARGETS)
 
@@ -39,6 +39,9 @@ d6p1:
 d6p2:
 	cd day-06/part2 && $(MAKE)
 
+d7p1:
+	cd day-07/part1 && $(MAKE)
+
 
 clean:
 	rm -rf build
@@ -54,3 +57,4 @@ clean:
 	cd day-05/part2 && $(MAKE) clean
 	cd day-06/part1 && $(MAKE) clean
 	cd day-06/part2 && $(MAKE) clean
+	cd day-07/part1 && $(MAKE) clean
