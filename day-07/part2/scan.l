@@ -5,7 +5,8 @@
 
 typedef enum Operator {
   MUL,
-  ADD
+  ADD,
+  CONC
 } Operator;
 
 typedef struct Calibration {
@@ -113,6 +114,15 @@ void print_calibration(Calibration *c) {
   printf("\n");
 }
 
+long long concatenate(unsigned long long val1, unsigned long long val2) {
+  unsigned long long pow = 10;
+  while (val2 >= pow) {
+    pow *= 10LL;
+  }
+
+  return val1 * pow + val2;
+}
+
 long long compute(long long total, long long val, Operator op) {
   long long res;
   switch (op) {
@@ -121,6 +131,9 @@ long long compute(long long total, long long val, Operator op) {
       break;
     case ADD:
       res = total + val;
+      break;
+    case CONC:
+      res = concatenate(total, val);
       break;
   }
 
@@ -139,6 +152,10 @@ bool calibration_is_valid(Calibration *c, long long total, int pos) {
 
   // attempt multiplication
   res = compute(total, c->arr[pos], MUL);
+  if (calibration_is_valid(c, res, pos + 1)) return true;
+
+  // attempt concatenation
+  res = compute(total, c->arr[pos], CONC);
   if (calibration_is_valid(c, res, pos + 1)) return true;
   
   return false;
