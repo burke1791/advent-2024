@@ -1,5 +1,7 @@
 %{
 
+#include <stdbool.h>
+
 #include "antenna.h"
 
 typedef struct Row {
@@ -123,10 +125,62 @@ AntennaList *find_antennas(Grid *g) {
   return al;
 }
 
+bool is_identical_coord(Coord *c1, Coord *c2) {
+  return c1->x == c2->x && c1->y == c2->y;
+}
+
 Coord *compute_distance(Coord *loc1, Coord *loc2) {
   int x = loc2->x - loc1->x;
   int y = loc2->y - loc1->y;
   return new_coord(x, y);
+}
+
+void add_antinodes(AntinodeList *l, Antenna *a1, Antenna *a2, int maxRow, int maxCol) {
+  Coord *dist = compute_distance(a1->loc, a2->loc);
+
+  bool withinBoundary = true;
+  int loopCount = 0;
+  int maxLoops = 10000;
+  int multiple = 1;
+
+  // antinodes for the antennas
+  append_antinode(l, a1->loc);
+  append_antinode(l, a2->loc);
+
+  // move in the upper direction
+  while (withinBoundary && loopCount < maxLoops) {
+    Coord *c = new_coord(a1->loc->x - (multiple * dist->x), a1->loc->y - (multiple * dist->y));
+    if (c->x < 0 || c->x > maxCol || c->y < 0 || c->y > maxRow) {
+      withinBoundary = false;
+    } else {
+      append_antinode(l, c);
+    }
+    free_coord(c);
+    loopCount++;
+    multiple++;
+  }
+
+  if (loopCount >= maxLoops) printf("infinite loop :(\n");
+
+  // move in the lower direction
+  withinBoundary = true;
+  loopCount = 0;
+  multiple = 1;
+  while (withinBoundary && loopCount < maxLoops) {
+    Coord *c = new_coord(a1->loc->x + (multiple * dist->x), a1->loc->y + (multiple * dist->y));
+    if (c->x < 0 || c->x > maxCol || c->y < 0 || c->y > maxRow) {
+      withinBoundary = false;
+    } else {
+      append_antinode(l, c);
+    }
+    free_coord(c);
+    loopCount++;
+    multiple++;
+  }
+
+  if (loopCount >= maxLoops) printf("infinite loop :(\n");
+
+  free(dist);
 }
 
 AntinodeList *identify_antinodes(Grid *g, AntennaList *al) {
@@ -139,26 +193,36 @@ AntinodeList *identify_antinodes(Grid *g, AntennaList *al) {
     for (int j = i + 1; j < al->count; j++) {
       Antenna *a2 = al->list[j];
       if (a1->freq == a2->freq) {
-        Coord *dist = compute_distance(a1->loc, a2->loc);
-        Coord *anti1 = new_coord(a1->loc->x - dist->x, a1->loc->y - dist->y);
-        Coord *anti2 = new_coord(a1->loc->x + (2 * dist->x), a1->loc->y + (2 * dist->y));
-
-        if (anti1->x >= 0 && anti1->x <= maxCol && anti1->y >= 0 && anti1->y <= maxRow) {
-          append_antinode(l, anti1);
-        }
-
-        if (anti2->x >= 0 && anti2->x <= maxCol && anti2->y >= 0 && anti2->y <= maxRow) {
-          append_antinode(l, anti2);
-        }
-
-        free_coord(dist);
-        free_coord(anti1);
-        free_coord(anti2);
+        add_antinodes(l, a1, a2, maxRow, maxCol);
       }
     }
   }
 
   return l;
+}
+
+char get_char(Grid *g, AntinodeList *l, int x, int y) {
+  char ch = '.';
+  if (g->rows[y]->arr[x] != ch) return g->rows[y]->arr[x];
+
+  Coord *c = new_coord(x, y);
+  for (int i = 0; i < l->count; i++) {
+    if (is_identical_coord(c, l->list[i])) ch = '#';
+  }
+
+  free_coord(c);
+
+  return ch;
+}
+
+void print_grid_with_antinodes(Grid *g, AntinodeList *l) {
+  for (int i = 0; i < g->count; i++) {
+    for (int j = 0; j < g->rows[i]->count; j++) {
+      char c = get_char(g, l, j, i);
+      printf("%c", c);
+    }
+    printf("\n");
+  }
 }
 
 int main(int argc, char **argv) {
