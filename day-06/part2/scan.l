@@ -3,9 +3,17 @@
 #include <string.h>
 #include <stdbool.h>
 
+typedef enum GuardDirection {
+  NORTH,
+  EAST,
+  SOUTH,
+  WEST
+} GuardDirection;
+
 typedef struct Coord {
   int x;
   int y;
+  GuardDirection dir;
 } Coord;
 
 typedef struct CoordList {
@@ -13,13 +21,6 @@ typedef struct CoordList {
   int count;
   Coord **coords;
 } CoordList;
-
-typedef enum GuardDirection {
-  NORTH,
-  EAST,
-  SOUTH,
-  WEST
-} GuardDirection;
 
 typedef enum GuardStatus {
   MARCHING,
@@ -274,7 +275,7 @@ Guard *get_guard(Grid *g) {
   }
 }
 
-void advance_north(Grid *g) {
+void advance_north(Grid *g, CoordList *cl) {
   if (g->guard->pos->y == 0) {
     g->guard->status = GONE;
     return;
@@ -282,6 +283,8 @@ void advance_north(Grid *g) {
 
   // if the next pos is an obstacle, turn east. Otherwise advance and add the new coord to the list
   if (g->rows[g->guard->pos->y - 1]->arr[g->guard->pos->x] == 1) {
+    
+    append_coord(cl, )
     g->guard->dir = EAST;
   } else {
     g->guard->pos->y--;
@@ -333,7 +336,7 @@ void advance_west(Grid *g) {
 }
 
 /* advances the guard one position in the direction she's facing, or rotates the guard clockwise 90 degrees if she can't move */
-void patrol_march(Grid *g, Guard *start) {
+void patrol_march(Grid *g, Guard *start, CoordList *cl) {
   switch (g->guard->dir) {
     case NORTH:
       advance_north(g);
@@ -359,16 +362,16 @@ void patrol_march(Grid *g, Guard *start) {
 bool patrol(Grid *g, Guard *start) {
   int loopCount = 0;
   int maxLoops = 10000;
+  CoordList *cl = new_coordlist(5);
 
   while (loopCount < maxLoops && g->guard->status == MARCHING) {
-    patrol_march(g, start);
+    patrol_march(g, start, cl);
 
     loopCount++;
   }
 
-  if (loopCount >= maxLoops) {
-    printf("Loops: %d\n", loopCount);
-  }
+  printf("Loops: %d\n", loopCount);
+  free_coordlist(cl);
 
   return g->guard->status == INFINITE;
 }
@@ -381,20 +384,26 @@ void remove_obstacle(Grid *g, int x, int y) {
   g->rows[y]->arr[x] = 0;
 }
 
-int find_infinite_loops(Grid *g) {
-  int infLoopCount = 0;
+CoordList *find_infinite_loops(Grid *g) {
+  CoordList *cl = new_coordlist(5);
   Guard *guardStart = malloc(sizeof(Guard));
   guardStart->dir = g->guard->dir;
   guardStart->pos = new_coord(g->guard->pos->x, g->guard->pos->y);
 
   for (int y = 0; y < g->count; y++) {
     for (int x = 0; x < g->rows[y]->count; x++) {
-      if (g->rows[y]->arr[x] != 1 && g->guard->pos->x != x && g->guard->pos->y != y) {
+      if (g->rows[y]->arr[x] != 1 && (g->guard->pos->x != x || g->guard->pos->y != y)) {
+        printf("place obstacle\n");
         place_obstacle(g, x, y);
 
-        if (patrol(g)) infLoopCount++;
+        if (patrol(g, guardStart)) {
+          Coord *c = new_coord(x, y);
+          append_coord(cl, c);
+        }
 
         remove_obstacle(g, x, y);
+        set_guard_pos(g, guardStart->pos->x, guardStart->pos->y, guardStart->dir);
+        g->guard->status = MARCHING;
       }
     }
   }
@@ -402,7 +411,7 @@ int find_infinite_loops(Grid *g) {
   free_coord(guardStart->pos);
   free(guardStart);
 
-  return infLoopCount;
+  return cl;
 }
 
 int main(int argc, char** argv) {
@@ -416,10 +425,13 @@ int main(int argc, char** argv) {
   yylex();
 
   /* print_grid(g); */
-  int infLoopCount = find_infinite_loops(g);
+  CoordList *cl = find_infinite_loops(g);
   /* print_grid(g); */
 
-  printf("Infinite loops: %d\n", infLoopCount);
+  printf("Infinite loops: %d\n", cl->count);
+  for (int i = 0; i < cl->count; i++) {
+    printf("x: %d | y: %d\n", cl->coords[i]->x, cl->coords[i]->y);
+  }
 
   free_coordlist(cl);
   free_grid(g);
