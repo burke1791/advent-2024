@@ -23,6 +23,7 @@ typedef enum GuardDirection {
 
 typedef enum GuardStatus {
   MARCHING,
+  INFINITE,
   GONE
 } GuardStatus;
 
@@ -273,16 +274,7 @@ Guard *get_guard(Grid *g) {
   }
 }
 
-void append_coordlist_dedupe(CoordList *cl, int x, int y) {
-  for (int i = 0; i < cl->count; i++) {
-    if (cl->coords[i]->x == x && cl->coords[i]->y == y) return;
-  }
-
-  Coord *c = new_coord(x, y);
-  append_coord(cl, c);
-}
-
-void advance_north(Grid *g, CoordList *cl) {
+void advance_north(Grid *g) {
   if (g->guard->pos->y == 0) {
     g->guard->status = GONE;
     return;
@@ -293,11 +285,10 @@ void advance_north(Grid *g, CoordList *cl) {
     g->guard->dir = EAST;
   } else {
     g->guard->pos->y--;
-    append_coordlist_dedupe(cl, g->guard->pos->x, g->guard->pos->y);
   }
 }
 
-void advance_east(Grid *g, CoordList *cl) {
+void advance_east(Grid *g) {
   int maxCol = g->rows[0]->count - 1;
   if (g->guard->pos->x == maxCol) {
     g->guard->status = GONE;
@@ -309,11 +300,10 @@ void advance_east(Grid *g, CoordList *cl) {
     g->guard->dir = SOUTH;
   } else {
     g->guard->pos->x++;
-    append_coordlist_dedupe(cl, g->guard->pos->x, g->guard->pos->y);
   }
 }
 
-void advance_south(Grid *g, CoordList *cl) {
+void advance_south(Grid *g) {
   int maxRow = g->count - 1;
   if (g->guard->pos->y == maxRow) {
     g->guard->status = GONE;
@@ -325,11 +315,10 @@ void advance_south(Grid *g, CoordList *cl) {
     g->guard->dir = WEST;
   } else {
     g->guard->pos->y++;
-    append_coordlist_dedupe(cl, g->guard->pos->x, g->guard->pos->y);
   }
 }
 
-void advance_west(Grid *g, CoordList *cl) {
+void advance_west(Grid *g) {
   if (g->guard->pos->x == 0) {
     g->guard->status = GONE;
     return;
@@ -340,46 +329,48 @@ void advance_west(Grid *g, CoordList *cl) {
     g->guard->dir = NORTH;
   } else {
     g->guard->pos->x--;
-    append_coordlist_dedupe(cl, g->guard->pos->x, g->guard->pos->y);
   }
 }
 
 /* advances the guard one position in the direction she's facing, or rotates the guard clockwise 90 degrees if she can't move */
-void patrol_march(Grid *g, CoordList *cl) {
+void patrol_march(Grid *g, Guard *start) {
   switch (g->guard->dir) {
     case NORTH:
-      advance_north(g, cl);
+      advance_north(g);
       break;
     case EAST:
-      advance_east(g, cl);
+      advance_east(g);
       break;
     case SOUTH:
-      advance_south(g, cl);
+      advance_south(g);
       break;
     case WEST:
-      advance_west(g, cl);
+      advance_west(g);
       break;
+  }
+
+  // check if the guard is back at her starting position and direction
+  Guard *guard = g->guard;
+  if (guard->pos->x == start->pos->x && guard->pos->y == start->pos->y && guard->dir == start->dir) {
+    guard->status = INFINITE;
   }
 }
 
-CoordList *patrol(Grid *g) {
-  CoordList *cl = new_coordlist(5);
+bool patrol(Grid *g, Guard *start) {
   int loopCount = 0;
-  bool isPatrolling = true;
+  int maxLoops = 10000;
 
-  // add the guard's starting position
-  append_coordlist_dedupe(cl, g->guard->pos->x, g->guard->pos->y);
+  while (loopCount < maxLoops && g->guard->status == MARCHING) {
+    patrol_march(g, start);
 
-  while (loopCount < 10000 && isPatrolling) {
-    patrol_march(g, cl);
-
-    if (g->guard->status == GONE) isPatrolling = false;
     loopCount++;
   }
 
-  printf("Loops: %d\n", loopCount);
+  if (loopCount >= maxLoops) {
+    printf("Loops: %d\n", loopCount);
+  }
 
-  return cl;
+  return g->guard->status == INFINITE;
 }
 
 void place_obstacle(Grid *g, int x, int y) {
@@ -390,7 +381,8 @@ void remove_obstacle(Grid *g, int x, int y) {
   g->rows[y]->arr[x] = 0;
 }
 
-void find_infinite_loops(Grid *g) {
+int find_infinite_loops(Grid *g) {
+  int infLoopCount = 0;
   Guard *guardStart = malloc(sizeof(Guard));
   guardStart->dir = g->guard->dir;
   guardStart->pos = new_coord(g->guard->pos->x, g->guard->pos->y);
@@ -398,15 +390,19 @@ void find_infinite_loops(Grid *g) {
   for (int y = 0; y < g->count; y++) {
     for (int x = 0; x < g->rows[y]->count; x++) {
       if (g->rows[y]->arr[x] != 1 && g->guard->pos->x != x && g->guard->pos->y != y) {
-        // place obstacle
-        // run patrol sim - check if guard ends up back at the starting location facing the same direction
-        // remove obstacle
+        place_obstacle(g, x, y);
+
+        if (patrol(g)) infLoopCount++;
+
+        remove_obstacle(g, x, y);
       }
     }
   }
 
   free_coord(guardStart->pos);
   free(guardStart);
+
+  return infLoopCount;
 }
 
 int main(int argc, char** argv) {
@@ -420,11 +416,10 @@ int main(int argc, char** argv) {
   yylex();
 
   /* print_grid(g); */
-  CoordList *cl = patrol(g);
+  int infLoopCount = find_infinite_loops(g);
   /* print_grid(g); */
 
-  printf("Guard: %d, %d\n", g->guard->pos->x, g->guard->pos->y);
-  printf("Distinct positions: %d\n", cl->count); // should be between 5330 and 5952
+  printf("Infinite loops: %d\n", infLoopCount);
 
   free_coordlist(cl);
   free_grid(g);
