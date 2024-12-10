@@ -50,6 +50,7 @@ void append_diskmapitem(DiskMap *dm, DiskMapItem *dmi);
 
 void construct_filesystem(Disk *d);
 void compact_filesystem(Filesystem *fs);
+void compact_diskmap(DiskMap *dm);
 long compute_checksum(Filesystem *fs);
 
 void print_filesystem(Filesystem *fs);
