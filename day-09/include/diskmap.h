@@ -9,21 +9,49 @@ typedef enum BlockType {
 typedef struct Block {
   BlockType type;
   int fileId;
-  int size;
 } Block;
+
+typedef struct Filesystem {
+  int size;
+  int count;
+  Block **blocks;
+} Filesystem;
+
+typedef struct DiskMapItem {
+  BlockType type;
+  int size;
+  int fileId;
+} DiskMapItem;
 
 typedef struct DiskMap {
   int size;
   int count;
-  Block **blocks;
+  DiskMapItem **items;
 } DiskMap;
 
-Block *new_block(BlockType type, int fileId, int size);
+typedef struct Disk {
+  DiskMap *dm;
+  Filesystem *fs;
+} Disk;
+
+Block *new_block(BlockType type, int fileId);
 void free_block(Block *b);
+
+DiskMapItem *new_diskmapitem(BlockType type, int size, int fileId);
+void free_diskmapitem(DiskMapItem *dmi);
 
 DiskMap *new_diskmap(int size);
 void free_diskmap(DiskMap *dm);
 
-void append_block(DiskMap *dm, Block *b);
+Disk *new_disk();
+void free_disk(Disk *d);
+
+void append_diskmapitem(DiskMap *dm, DiskMapItem *dmi);
+
+void construct_filesystem(Disk *d);
+void compact_filesystem(Filesystem *fs);
+long compute_checksum(Filesystem *fs);
+
+void print_filesystem(Filesystem *fs);
 
 #endif /* DISKMAP_H */

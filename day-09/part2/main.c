@@ -16,10 +16,8 @@ int main(int argc, char **argv) {
 
   yyparse(&(d->dm));
 
+  compact_diskmap(d->dm);
   construct_filesystem(d);
-  // print_filesystem(d->fs);
-  compact_filesystem(d->fs);
-  // print_filesystem(d->fs);
 
   long checksum = compute_checksum(d->fs);
   printf("checksum: %ld\n", checksum);

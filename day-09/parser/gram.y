@@ -17,12 +17,12 @@ void yyerror(DiskMap **dm, char *s, ...);
   int i;
 
   struct DiskMap *disk;
-  struct Block *b;
+  struct DiskMapItem *dmi;
 }
 
 %token <i> FREEBLOCK FILEBLOCK
 %type <disk> diskmap
-%type <b> block
+%type <dmi> item
 
 %start result
 
@@ -34,24 +34,24 @@ result: diskmap {
     }
   ;
 
-diskmap: block {
+diskmap: item {
       DiskMap *diskmap = new_diskmap(5);
-      append_block(diskmap, $1);
+      append_diskmapitem(diskmap, $1);
 
       $$ = diskmap;
     }
-  | diskmap block {
-      append_block($1, $2);
+  | diskmap item {
+      append_diskmapitem($1, $2);
     }
   ;
 
-block: FREEBLOCK {
-      Block *b = new_block(BT_FREE, -1, $1);
-      $$ = b;
+item: FREEBLOCK {
+      DiskMapItem *it = new_diskmapitem(BT_FREE, $1, -1);
+      $$ = it;
     }
   | FILEBLOCK {
-      Block *b = new_block(BT_FILE, -1, $1);
-      $$ = b;
+      DiskMapItem *it = new_diskmapitem(BT_FILE, $1, -1);
+      $$ = it;
     }
 
 
