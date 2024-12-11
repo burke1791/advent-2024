@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/day-05/include",
                 "${workspaceFolder}/day-08/include",
-                "${workspaceFolder}/day-09/include"
+                "${workspaceFolder}/day-09/include",
+                "${workspaceFolder}/day-10/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

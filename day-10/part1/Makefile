@@ -5,7 +5,7 @@ CFLAGS = -I../include -fsanitize=address -fsanitize=undefined -static-libasan -g
 BUILD_DIR = ../../build
 TARGET_EXEC = d10p1
 
-$(BUILD_DIR)/$(TARGET_EXEC): lex.yy.c
+$(BUILD_DIR)/$(TARGET_EXEC): lex.yy.c ../src/trail.c
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $?
 

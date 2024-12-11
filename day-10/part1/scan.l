@@ -1,5 +1,7 @@
 %{
 
+#include "trail.h"
+
 typedef struct Row {
   int size;
   int count;
@@ -106,6 +108,63 @@ void print_grid(Grid *g) {
   }
 }
 
+int compute_trailhead_score(Grid *g, SummitList *l, int prevElevation, int x, int y) {
+  int maxRow = g->count - 1;
+  int maxCol = g->rows[0]->count - 1;
+  if (x < 0 || x > maxCol || y < 0 || y > maxRow) return 0;
+
+  int currentElevation = g->rows[y]->arr[x];
+
+  if ((currentElevation - prevElevation) != 1) return 0;
+
+  if (currentElevation == 9 && prevElevation == 8) {
+    Coord *c = new_coord(x, y);
+    append_summit(l, c);
+    return 1;
+  }
+
+  return compute_trailhead_score(g, l, currentElevation, x, y - 1) +
+    compute_trailhead_score(g, l, currentElevation, x + 1, y) +
+    compute_trailhead_score(g, l, currentElevation, x, y + 1) +
+    compute_trailhead_score(g, l, currentElevation, x - 1, y);
+}
+
+void compute_scores(TrailHeadList *l, Grid *g) {
+  for (int i = 0; i < l->count; i++) {
+    TrailHead *th = l->trails[i];
+    SummitList *l = new_summitlist(5);
+    int score = compute_trailhead_score(g, l, -1, th->loc->x, th->loc->y);
+    th->score = l->count;
+    free_summitlist(l);
+  }
+}
+
+TrailHeadList *find_trailheads(Grid *g) {
+  TrailHeadList *l = new_trailheadlist(5);
+
+  for (int y = 0; y < g->count; y++) {
+    Row *r = g->rows[y];
+    for (int x = 0; x < r->count; x++) {
+      if (r->arr[x] == 0) {
+        Coord *c = new_coord(x, y);
+        TrailHead *th = new_trailhead(c);
+        append_trailhead(l, th);
+      }
+    }
+  }
+
+  return l;
+}
+
+int compute_total_score(TrailHeadList *l) {
+  int total = 0;
+  for (int i = 0; i < l->count; i++) {
+    total += l->trails[i]->score;
+  }
+
+  return total;
+}
+
 int main(int argc, char **argv) {
   if (!(yyin = fopen(argv[1], "r"))) {
     perror(argv[1]);
@@ -116,7 +175,13 @@ int main(int argc, char **argv) {
 
   yylex();
 
-  print_grid(g);
+  /* print_grid(g); */
+
+  TrailHeadList *l = find_trailheads(g);
+  compute_scores(l, g);
+  int totalScore = compute_total_score(l);
+  printf("total: %d\n", totalScore);
 
   free_grid(g);
+  free_trailheadlist(l);
 }
