@@ -27,5 +27,5 @@ int main(int argc, char **argv) {
   printf("num blinks: %d\n", numBlinks);
   printf("num stones: %d\n", l->count);
 
-  free_stonelist(l);
+  free_stonelist(l, true);
 }
